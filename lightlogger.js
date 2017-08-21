@@ -18,10 +18,6 @@ var serialdata = null;
 
 parser.on('data', function(data){
     serialdata = data;
-});
-
-setInterval(function () {
-    console.log('Data:', serialdata);
 
     var time = new Date().toLocaleString();
     mongo.connect(url, function(err, db) {
@@ -35,4 +31,8 @@ setInterval(function () {
             db.close();
         })
     });
-}, 100000);
+});
+
+// setInterval(function () {
+//     console.log('Data:', serialdata);
+// }, 100000);
