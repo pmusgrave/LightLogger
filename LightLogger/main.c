@@ -7,17 +7,61 @@
 
 #include <avr/io.h>
 #include <util/delay.h>
+#include <avr/interrupt.h>
 
 #define F_CPU 16E6UL
 #define FOSC 16E6 // Clock Speed
 #define BAUD 9600
 #define MYUBRR FOSC/16/BAUD-1
 
-void USART_Init( unsigned int ubrr);
+void InitTimer1(void);
+void InitADC(void);
+void InitUSART( unsigned int ubrr);
 void USART_Transmit( unsigned char data );
 void printByte(uint8_t byte);
 
+ISR(TIMER1_OVF_vect)
+{
+	ADCSRA |= (1 << ADSC);			// start ADC conversion
+}
+
 int main(void)
+{
+	sei();
+	
+	InitTimer1();
+	
+	InitADC();
+	
+	InitUSART(MYUBRR);
+	
+	uint16_t lightlevel;
+	
+    while (1) 
+    {
+		/*
+		while (!(ADCSRA & (1 << ADSC))){
+			;
+		}
+		*/
+		if ((ADCSRA & (1 << ADSC))){
+			lightlevel = ADCH;
+		
+			printByte(lightlevel);
+			USART_Transmit('\n');
+			//_delay_ms(1000);
+		}
+    }
+}
+
+void InitTimer1(void)
+{
+	PRR &= (1 << PRTIM1);				// enable Timer1
+	TCCR1B |= (1 << CS12) | (1 << CS10);// clk/1024
+	TIMSK1 |= (1 << TOIE1);				// enable overflow interrupts
+}
+
+void InitADC(void)
 {
 	ADCSRA |= (1 << ADEN);
 	
@@ -25,30 +69,12 @@ int main(void)
 	ADCSRA &= ~(1 << ADPS2);
 	ADCSRA |= (0b11);
 	
-    ADMUX |= (0b101 << MUX0);			// ADC channel 5
-	ADMUX |= (1 << REFS0);				// Voltage reference = AVCC
-	
-	USART_Init(MYUBRR);
-	
-	uint8_t lightlevel;
-	uint16_t adcValue;
-	
-    while (1) 
-    {
-		ADCSRA |= (1 << ADSC);			// start ADC conversion
-		while (!(ADCSRA & (1 << ADSC))){
-			;
-		}
-		adcValue = ADC;
-		lightlevel = (adcValue >> 7);
-		
-		printByte(lightlevel);
-		USART_Transmit('\n');
-		_delay_ms(1000);
-    }
+	ADMUX |= (0b101 << MUX0);		// ADC channel 5
+	ADMUX |= (1 << ADLAR);			// left adjust ADC result, will only use 8 bit precision
+	ADMUX |= (1 << REFS0);			// Voltage reference = AVCC
 }
 
-void USART_Init( unsigned int ubrr)
+void InitUSART( unsigned int ubrr)
 {
 	/*Set baud rate */
 	UBRR0H = (unsigned char)(ubrr>>8);
