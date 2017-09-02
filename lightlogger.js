@@ -32,7 +32,3 @@ parser.on('data', function(data){
         })
     });
 });
-
-// setInterval(function () {
-//     console.log('Data:', serialdata);
-// }, 100000);

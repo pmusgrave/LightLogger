@@ -8,18 +8,24 @@ var plotly = require('plotly')("psmusgrave", "r1yzjyPgIlxDuQllpW5A");
 
 mongo.connect(url, function(err, db) {
     if (err) throw err;
-    var collection = db.collection('light_readings');
+    var data = db.collection('light_readings').find().toArray(function(err,documents){
+        var x = [];
+        var y = [];
+        for (var i in documents){
+            x.push(documents[i].timestamp);
+            y.push(documents[i].light);
+        }
 
-    var data = [
-        {
-            x: collection.find({}, {_id: false, timestamp: true, light: false}).toArray(function(err,documents){}),
-            y: collection.find({}, {_id: false, timestamp: false, light: true}).toArray(function(err,documents){}),
+        var graphData = {
+            x: x,
+            y: y,
             type: "scatter"
         }
-    ];
-    db.close();
-    var graphOptions = {filename: "date-axes", fileopt: "overwrite"};
-    plotly.plot(data, graphOptions, function (err, msg) {
-        console.log(msg);
+        var graphOptions = {filename: "date-axes", fileopt: "overwrite"};
+        plotly.plot(graphData, graphOptions, function (err, msg) {
+            console.log(msg);
+        });
+
+        db.close();
     });
 });
